@@ -1,0 +1,28 @@
+﻿using Microsoft.WindowsAzure.Storage.Table;
+using System;
+using System.Collections.Generic;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace pv207_services
+{
+    public static class CloudTableExtensions
+    {
+        public static async Task<IList<T>> ExecuteQueryAsync<T>(this CloudTable table, TableQuery<T> query, CancellationToken cancellationToken = default)
+            where T : ITableEntity, new()
+        {
+            var items = new List<T>();
+            TableContinuationToken token = null;
+
+            do
+            {
+                var segment = await table.ExecuteQuerySegmentedAsync(query, token);
+                token = segment.ContinuationToken;
+                items.AddRange(segment);
+            } while (token != null && !cancellationToken.IsCancellationRequested);
+
+            return items;
+        }
+    }
+}
