@@ -26,5 +26,22 @@ namespace pv207_services.Models
             Duration = o.Duration,
             StartDate = o.StartDate
         };
+
+        public static LectureTableEntity ToTableEntity(this Lecture o) => new LectureTableEntity()
+        {
+            ETag = "*",
+            PartitionKey = "all",
+            RowKey = o.Id,
+            Id = o.Id,
+            Name = o.Name,
+            Information = o.Information
+        };
+
+        public static Lecture ToModel(this LectureTableEntity o) => new Lecture()
+        {
+            Id = o.Id,
+            Name = o.Name,
+            Information = o.Information
+        };
     }
 }

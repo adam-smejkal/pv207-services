@@ -14,7 +14,7 @@ using pv207_services.Models;
 
 namespace pv207_services
 {
-    public static class Functions
+    public static class SeminarFunctions
     {
         [FunctionName("GetSeminars")]
         public static async Task<IActionResult> GetSeminars(
@@ -24,6 +24,8 @@ namespace pv207_services
         {
             if (req.Query.TryGetValue("lookup", out var lookup))
             {
+                log.LogInformation($"Looking up a seminar with name {lookup}");
+
                 var condition = TableQuery.GenerateFilterCondition("Name", QueryComparisons.Equal, lookup);
                 var results = await table.ExecuteQueryAsync(new TableQuery<SeminarTableEntity>().Where(condition), CancellationToken.None);
                 if (!results.Any())
@@ -42,6 +44,8 @@ namespace pv207_services
             ILogger log)
         {
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
+            log.LogInformation($"Creating a seminar: {requestBody}");
+
             var input = JsonConvert.DeserializeObject<SeminarCreateModel>(requestBody);
 
             var entity = new Seminar() 
@@ -65,6 +69,8 @@ namespace pv207_services
             ILogger log,
             string id)
         {
+            log.LogInformation($"Updating seminar with ID {id}");
+
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
             var input = JsonConvert.DeserializeObject<SeminarUpdateModel>(requestBody);
 
@@ -87,6 +93,32 @@ namespace pv207_services
             await table.ExecuteAsync(TableOperation.Replace(entity.ToTableEntity()));
 
             return new OkObjectResult(entity);
+        }
+
+        [FunctionName("AddSeminarLecture")]
+        public static async Task<IActionResult> AddSeminarLecture(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "seminars/{id}/lectures")] HttpRequest req,
+            [Table("SeminarLectures")] CloudTable table,
+            ILogger log,
+            string id)
+        {
+            log.LogInformation($"Creating a seminar-lecture mapping");
+
+            string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
+            var input = JsonConvert.DeserializeObject<LectureSearchResultModel.LectureSearchResultItem>(requestBody);
+
+            var entity = new SeminarLectureTableEntity()
+            {
+                ETag = "*",
+                LectureId = input.Id,
+                SeminarId = id,
+                PartitionKey = "all",
+                RowKey = id + input.Id
+            };
+
+            await table.ExecuteAsync(TableOperation.Insert(entity));
+
+            return new OkResult();
         }
     }
 }
